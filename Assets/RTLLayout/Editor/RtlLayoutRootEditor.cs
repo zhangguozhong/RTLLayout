@@ -4,11 +4,13 @@ using UnityEngine;
 
 namespace RTLLayout.Editor
 {
+    /// <summary>预制体配置入口：三个列表可编辑，LTR 缓存只读；预览期间禁止重新烘焙。</summary>
     [CustomEditor(typeof(RtlLayoutRoot)), CanEditMultipleObjects]
     public sealed class RtlLayoutRootEditor : UnityEditor.Editor
     {
         private bool showBaselines;
         private readonly System.Collections.Generic.HashSet<int> expandedNodes = new System.Collections.Generic.HashSet<int>();
+        /// <summary>配置与基准分别绘制；烘焙记录 Undo 并标记嵌套根和 Prefab 实例修改。</summary>
         public override void OnInspectorGUI()
         {
             DrawPreview();
@@ -52,6 +54,7 @@ namespace RTLLayout.Editor
                 serializedObject.Update();
             }
         }
+        /// <summary>单选且已烘焙时提供方向切换，不在这里重新采集布局。</summary>
         private void DrawPreview()
         {
             var root = (RtlLayoutRoot)target;
@@ -73,11 +76,13 @@ namespace RTLLayout.Editor
             }
             else if (root.BakedNodeCount == 0) EditorGUILayout.HelpBox("Collect and bake the LTR layout to enable preview.", MessageType.Info);
         }
+        /// <summary>离开当前根的 Inspector 时撤销临时预览。</summary>
         private void OnDisable()
         {
             foreach (var selected in targets)
                 if (selected is RtlLayoutRoot root && RtlLayoutPreview.IsPreviewing(root)) { RtlLayoutPreview.Stop(); break; }
         }
+        /// <summary>折叠状态可交互，实际缓存字段禁用编辑，避免直接破坏原始 LTR 基准。</summary>
         private void DrawReadOnlyBaselines()
         {
             var baselines = serializedObject.FindProperty("bakedLayout");

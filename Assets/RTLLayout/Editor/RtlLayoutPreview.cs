@@ -8,15 +8,18 @@ using UnityEngine.UI;
 
 namespace RTLLayout.Editor
 {
-    /// <summary>Temporary editor values. AnimationMode restores properties without touching baked data.</summary>
+    /// <summary>编辑器临时预览：通过 AnimationMode 还原属性，不修改已烘焙数据。</summary>
     [InitializeOnLoad]
     public static class RtlLayoutPreview
     {
         static RtlLayoutRoot active;
         static bool ownsAnimationMode;
         static readonly Dictionary<RtlLayoutRoot, bool> directions = new Dictionary<RtlLayoutRoot, bool>();
+        /// <summary>是否由本预览器持有 AnimationMode；用于锁定 Inspector 的配置与烘焙操作。</summary>
         public static bool IsActive => ownsAnimationMode;
+        /// <summary>判断当前预览是否属于指定根，避免关闭无关 Inspector 时结束其他预览。</summary>
         public static bool IsPreviewing(RtlLayoutRoot root) => ownsAnimationMode && active == root;
+        /// <summary>保存、切换 Play、关闭 Prefab 或脚本重载前恢复，防止临时属性写入资产。</summary>
         static RtlLayoutPreview()
         {
             AssemblyReloadEvents.beforeAssemblyReload += Stop;
@@ -26,6 +29,7 @@ namespace RTLLayout.Editor
             PrefabStage.prefabSaving += root => Stop();
             PrefabStage.prefabStageClosing += stage => Stop();
         }
+        /// <summary>仅允许已烘焙的编辑期根预览；登记临时属性后应用方向，不调用 Capture/Bake。</summary>
         public static void SetDirection(RtlLayoutRoot root, bool rtl)
         {
             if (Application.isPlaying || root == null || root.BakedNodeCount == 0)
@@ -65,6 +69,7 @@ namespace RTLLayout.Editor
         }
         static void RegisterVector(Component component,string path,int dimensions)
         { for (int i=0;i<dimensions;i++) Register(component,path+"."+"xyz"[i]); }
+        /// <summary>把进入预览前的属性值登记到 AnimationMode，而不是覆盖序列化的 LTR 缓存。</summary>
         static void Register(Component component,string path)
         {
             var property = new SerializedObject(component).FindProperty(path);
@@ -76,6 +81,7 @@ namespace RTLLayout.Editor
             var binding=EditorCurveBinding.FloatCurve(AnimationUtility.CalculateTransformPath(component.transform,active.transform),component.GetType(),path);
             AnimationMode.AddPropertyModification(binding,new PropertyModification { target=component,propertyPath=path,value=value },true);
         }
+        /// <summary>先还原方向状态，再让 AnimationMode 恢复进入预览前的实际编辑值，包括未烘焙修改。</summary>
         public static void Stop()
         {
             if (!ownsAnimationMode) return;
@@ -92,9 +98,10 @@ namespace RTLLayout.Editor
             }
         }
     }
-    // Restores temporary values before ordinary asset saves, including a selected prefab asset.
+    // 普通资产保存前还原临时值，包含直接选中的 Prefab 资产。
     public sealed class RtlPreviewSaveGuard : AssetModificationProcessor
     {
+        /// <summary>普通资产保存也先结束预览，确保磁盘文件不会包含临时镜像值。</summary>
         static string[] OnWillSaveAssets(string[] paths) { RtlLayoutPreview.Stop(); return paths; }
     }
 }
