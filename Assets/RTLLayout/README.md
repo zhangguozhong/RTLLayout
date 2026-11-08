@@ -1,50 +1,88 @@
 # RTLLayout
 
-独立 UGUI 横向布局镜像库，运行时程序集仅引用 `Unity.ugui`，不依赖 SegmentUI。
+## 安装
 
-## 编辑器配置
+使用 Unity 2022.3 和 UGUI 1.0。将本仓库 `Assets/RTLLayout` 及 `.meta` 文件复制到工程的 `Assets` 目录。
 
-在以 LTR 编写的 Prefab 根添加 `RTLLayout.RtlLayoutRoot`。Inspector 提供三个可编辑列表：
+保留 Editor 目录以使用预收集和 Inspector 预览。如果保留 Tests 目录，需要安装 Unity Test Framework；不需要测试时可移除 Tests。
 
-- **Collected Components**：参与布局适配的 `RectTransform`、UGUI `Text`、`LayoutGroup` 组件引用。可增删引用；不接受 Image 等没有适配属性的类型。删除已发现的组件后，运行时兜底不会偷偷重新加入它。
-- **Ignored Nodes**：忽略所选 Transform 的整个子树，包括向嵌套根的方向传播；忽略优先于反转。
-- **Mirrored Nodes**：显式反转所选 Transform 的原始 `localScale.x`。保留非单位值和原有正负号，回到 LTR 时恢复原始 X 缩放。这会影响其子节点的视觉方向，应选择专用 Visual 节点；不会添加 mesh effect。Y/Z 缩放不改写。
+RTLLayout 可单独使用，无需安装 SegmentUI。请使用目录复制方式安装。
 
-点击 **Discover Components & Bake LTR (Reset Selection)** 自动发现组件并序列化 LTR 基准；此操作重建组件选择列表，保留忽略和反转列表。修改组件选择后，点击 **Bake Selected Components (Keep Edited Lists)** 保留选择并重新烘焙。随后保存 Prefab。两个操作均支持 Undo、Prefab Stage、Prefab 资产及实例修改记录，递归处理嵌套根。重复组件引用会去重，非法类型或不属于当前根所有权的组件在配置烘焙时移除；忽略/反转列表中的域外引用安全跳过。
+## 配置 Prefab
 
-**Baked LTR Baselines** 只读展示节点引用、属性所有权、anchors/pivot/position、localScale、Text 对齐、LayoutGroup padding/排列方向/起始角和节点策略。不得直接编辑缓存；在原始 LTR 布局上编辑组件，再点击相应烘焙按钮。Unity 实例化 Prefab 时会自动重映射这些引用。
+1. 按从左到右（LTR）的方式完成布局。
+2. 在 Prefab 根节点添加 `RTLLayout.RtlLayoutRoot`。
+3. 点击 **Discover Components & Bake LTR (Reset Selection)**，收集组件并缓存原始 LTR 布局。
+4. 根据需要编辑以下列表。
+5. 点击 **Bake Selected Components (Keep Edited Lists)**，保存调整后的选择与基准，然后保存 Prefab。
 
-Seeder 在最终布局完成后、保存资产前调用 `root.CaptureLayout()`；保留人工选择时改用 `root.BakeConfiguredLayout()`。`BakedNodeCount` 返回保存节点数。Play 模式或当前仍在 RTL 的层级拒绝烘焙。完整恢复 LTR 后可编辑并重烘焙，替换旧基准。
+| Inspector 配置 | 使用方式 |
+| --- | --- |
+| Collected Components | 添加或移除需要适配的 RectTransform、UGUI Text、LayoutGroup 引用 |
+| Ignored Nodes | 添加不需要适配的节点，该节点的整个子树都会被忽略 |
+| Mirrored Nodes | 添加需要水平反转的视觉节点，RTL 时反转原始 localScale.x，LTR 时恢复 |
+| Baked LTR Baselines | 展开查看已缓存的原始属性，只读 |
 
-## Inspector 临时预览
+**Discover** 会重新发现组件并重置收集选择；保留人工编辑的选择时使用 **Bake Selected Components**。修改原始布局后，应在 LTR 状态重新烘焙。
 
-完成 LTR 烘焙后，在 Prefab 编辑模式选中挂有 `RtlLayoutRoot` 的节点，使用 **Layout Preview → LTR / RTL** 检查两种方向。预览读取已缓存的 LTR 基准，不重新收集或覆盖缓存；预览期间配置列表和烘焙按钮禁用，只读缓存仍可展开查看。
+图片需要反转时，将图片所在的 Transform 加入 Mirrored Nodes。缩放反转会影响其子节点，建议使用专用图片节点，避免把文字一起反转。Ignored Nodes 优先于 Mirrored Nodes。
 
-点击 **Exit Preview / Restore Layout** 恢复进入预览前的布局，包括尚未重新烘焙的编辑值。离开该 Inspector、保存资产或 Prefab、关闭 Prefab Stage、脚本重载、进入 Play 时也会退出并恢复，避免保存镜像后的临时属性。预览使用 Unity AnimationMode，不与其他动画预览同时开启；未烘焙、多选及 Play 模式不提供预览。
+## 预览 LTR / RTL
 
-## 运行时
+完成烘焙后，在 Prefab 编辑模式选中 `RtlLayoutRoot`，点击 Inspector 中的 **Layout Preview → LTR / RTL**。
+
+预览不会覆盖缓存的 LTR 数据。预览期间配置列表与烘焙按钮不可编辑；点击 **Exit Preview / Restore Layout** 后恢复预览前的布局，再继续编辑。
+
+保存、离开该 Inspector、关闭 Prefab Stage、脚本重载或进入 Play 时也会自动退出预览。未烘焙、多选或 Play 模式下不能开启预览；使用前先结束其他动画预览。
+
+## 运行时切换
 
 ```csharp
-root.Collect();                 // 可选：载入已烘焙基准并注册动态节点
-root.SetRightToLeft(true);      // 自动增量兜底并应用 RTL
-root.SetRightToLeft(false);     // 从同一份 LTR 基准恢复
+using RTLLayout;
+using UnityEngine;
+
+public class ScreenDirection : MonoBehaviour
+{
+    [SerializeField] RtlLayoutRoot layoutRoot;
+
+    public void SetRightToLeft(bool rightToLeft)
+    {
+        layoutRoot.SetRightToLeft(rightToLeft);
+    }
+}
 ```
 
-重复 Collect/同方向设置幂等。运行时优先使用 Prefab 烘焙数据；只有未烘焙的新节点或新组件兜底采集。动态节点必须按 LTR 创建，配置完成后 Collect/SetRightToLeft。根不在 Awake/OnEnable 自动应用，允许业务先完成绑定。普通 Collect 永不覆盖已存储的 LTR 数据。
+`true` 应用 RTL，`false` 恢复 LTR。业务绑定完成后主动调用；组件不会在 Awake/OnEnable 自动应用方向。
 
-## 所有权与边界
+## 动态添加节点
 
-- 顶层根的 RectTransform 与缩放由外部容器管理，不修改。根上的 Text 和 LayoutGroup 可参与。
-- 父根拥有嵌套根的外部 RectTransform/显式缩放反转；子根拥有自身组件及内部节点。嵌套根自身的 MirroredNodes 重复引用其根 Transform 不会双反转。
-- 启用且激活的父 LayoutGroup 管理子项几何；适配组 padding/alignment、水平顺序或 Grid 起始角，不重复镜像被驱动的子项。ILayoutIgnorer 语义与 Unity 一致：所有 ignorer 均为 true 才退出布局；禁用 LayoutElement 仍参与判定。
-- 几何只写水平 anchors、pivot、anchoredPosition，保留实时纵向坐标、尺寸。显式反转单独控制 localScale.x。
-- `RtlLayoutNode.IgnoreSelf` 仅跳过当前节点，`IgnoreSubtree` 跳过子树及嵌套方向传播。可用 MirrorRectTransform/MirrorLayoutGroup/MirrorText 进一步关闭属性适配。图片反转统一使用根的 MirroredNodes。
-- 运行中修改列表/策略不会自动撤销此前已应用的变换，应先恢复 LTR 再改配置。独立库不管理安全区、分页或手势。Text 仅交换对齐，不处理 TMP、字形连接及双向排版。
+先按 LTR 创建并配置新增节点，再注册和应用当前方向：
 
-## 动态生命周期
+```csharp
+root.Collect();
+root.SetRightToLeft(rightToLeft);
+```
 
-运行时基准按 Transform 身份共享，支持对象池、跨根重挂及晚加嵌套根；旧根只遍历当前归属的节点。加载烘焙数据时按当前几何/组件所有权过滤，防止旧父 Prefab 记录覆盖后来新增子根的基准。转移后调用接收根 Collect/SetRightToLeft；必要时再同步父根方向。
+Collect 仅补充新节点或新组件，不覆盖已缓存的 LTR 基准。对象池复用或节点移到另一个根后，对接收根重新调用 Collect/SetRightToLeft。
 
-已销毁 Transform 的缓存在后续 Collect 时清理；新的运行会话清空缓存。活节点离开所有根时保留基准以支持池复用。运行中不提供重设原始基准的 API；编辑器使用明确的烘焙操作替换。不会自动监听层级变化。
+运行中修改忽略或反转列表前，先调用 `SetRightToLeft(false)` 恢复 LTR，再修改配置并应用目标方向。
 
-`RTLLayout.Tests` EditMode 覆盖幂等/往返、动态纵向值、嵌套初始化顺序、晚加根与跨根转移、烘焙实例引用重映射、旧父基准隔离、列表增删/去重、忽略优先级、布局所有权和原始缩放反转。
+## 嵌套与局部适配
+
+子 Prefab 可以有自己的 `RtlLayoutRoot`。父根管理子根的外部位置，子根管理内部布局；不要再额外编写一套整体镜像逻辑。
+
+需要按节点控制时，添加 `RtlLayoutNode`：
+
+- `IgnoreSelf`：忽略当前节点。
+- `IgnoreSubtree`：忽略当前节点及所有子节点，也停止向内部根传播方向。
+- `MirrorRectTransform`、`MirrorLayoutGroup`、`MirrorText`：分别控制位置布局、布局组和文字对齐适配。
+
+根节点自身的位置和缩放由外部容器配置。使用 LayoutGroup 排列子节点时，将布局组纳入收集，子项位置继续由布局组管理。
+
+## 配合 SegmentUI 使用
+
+从 [SegmentUI](https://github.com/zhangguozhong/SegmentUI) 导入 `Integrations/RTLLayout` 桥接，在 Page/Item 根同时添加 `RtlLayoutRoot` 和 `SegmentRtlLayoutBridge`。页面绑定完成后，桥接会同步分页方向。
+
+## 文本适配
+
+UGUI Text 会交换左右对齐。阿拉伯文字形连接、双向文本排版和 TMP 需要另接业务文本适配组件。
