@@ -1,0 +1,1 @@
+{"name": "RTLLayout.Tests", "references": ["RTLLayout", "Unity.ugui", "RTLLayout.Editor"], "includePlatforms": ["Editor"], "optionalUnityReferences": ["TestAssemblies"]}
