@@ -2,11 +2,23 @@
 
 ## 安装
 
-使用 Unity 2022.3 和 UGUI 1.0。将本仓库 `Assets/RTLLayout` 及 `.meta` 文件复制到工程的 `Assets` 目录。
+支持 Unity 2022.3 和 UGUI 1.0。
 
-保留 Editor 目录以使用预收集和 Inspector 预览。如果保留 Tests 目录，需要安装 Unity Test Framework；不需要测试时可移除 Tests。
+### GitHub + UPM
 
-RTLLayout 可单独使用，无需安装 SegmentUI。请使用目录复制方式安装。
+在 **Window → Package Manager → + → Add package from git URL** 中添加以下地址（电脑需安装 Git）：
+
+```text
+https://github.com/zhangguozhong/RTLLayout.git?path=Assets/RTLLayout#v0.1.0
+```
+
+固定版本使用 `#v0.1.0`；跟随主分支时改为 `#main`，之后通过 Package Manager 更新。不要同时保留 Assets 中的同一组件源码，以免程序集重复。
+
+RTLLayout 可独立使用，无需安装 SegmentUI。
+
+### 目录复制安装
+
+也可将仓库的 `Assets/RTLLayout` 目录（含 `.meta`）复制到工程 `Assets` 下。保留 Tests 目录时需安装 Unity Test Framework。
 
 ## 配置 Prefab
 
@@ -86,3 +98,13 @@ Collect 仅补充新节点或新组件，不覆盖已缓存的 LTR 基准。对�
 ## 文本适配
 
 UGUI Text 会交换左右对齐。阿拉伯文字形连接、双向文本排版和 TMP 需要另接业务文本适配组件。
+
+## 运行包内测试
+
+通过 Package Manager 安装 **Test Framework**。UPM 安装时，在工程 `Packages/manifest.json` 顶层添加 `testables`（与 `dependencies` 同级，保留其他配置）：
+
+```json
+"testables": ["com.zhangguozhong.rtllayout"]
+```
+
+打开 **Window → General → Test Runner**，运行 EditMode 测试。

@@ -1,0 +1,15 @@
+{
+  "name": "com.zhangguozhong.rtllayout",
+  "version": "0.1.0",
+  "displayName": "RTLLayout",
+  "description": "UGUI right-to-left layout baking and preview.",
+  "unity": "2022.3",
+  "dependencies": {
+    "com.unity.ugui": "1.0.0"
+  },
+  "author": {
+    "name": "zhangguozhong",
+    "url": "https://github.com/zhangguozhong"
+  },
+  "documentationUrl": "https://github.com/zhangguozhong/RTLLayout#readme"
+}
